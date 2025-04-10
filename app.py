@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 from huggingface_hub import hf_hub_download
 
-# Function to set background image with opacity
+# Set Background Image
 def set_background(image_file, opacity=1):
     with open(image_file, "rb") as image:
         encoded = base64.b64encode(image.read()).decode()
@@ -20,24 +20,23 @@ def set_background(image_file, opacity=1):
     """
     st.markdown(css, unsafe_allow_html=True)
 
+# Recommend Movies
 def recommend(movie):
     movie_index = movies[movies['title'] == movie].index[0]
-    similarity_array = similarity[movie_index]
-    movie_list = sorted(enumerate(similarity_array), reverse=True, key=lambda x: x[1])[1:6]
+    distances = similarity[movie_index]
+    movie_list = sorted(enumerate(distances), reverse=True, key=lambda x: x[1])[1:6]
     return [movies.iloc[i[0]].title for i in movie_list]
 
-# Load movie_dict locally
+# Load Movie Data
 movie_dict = pickle.load(open('movies_dict.pkl', 'rb'))
 movies = pd.DataFrame(movie_dict)
 
-# Load similarity.pkl from HuggingFace
+# Load Similarity Data from HuggingFace
 similarity_path = hf_hub_download(
     repo_id="NERF-HAARIS/movie-recommender-files",
     filename="similarity.pkl"
 )
-
-with open(similarity_path, 'rb') as f:
-    similarity = pickle.load(f)
+similarity = pickle.load(open(similarity_path, 'rb'))
 
 # Streamlit Config
 st.set_page_config(page_title="Movie Recommender", layout="centered")
