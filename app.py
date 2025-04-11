@@ -26,6 +26,16 @@ def set_background(image_file, opacity=1):
 
 set_background('movieback2.png', opacity=1)
 
+# Make all selectbox labels white
+st.markdown("""
+    <style>
+    label {
+        color: white !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
 # HuggingFace API Setup
 api = HfApi()
 
