@@ -5,11 +5,14 @@ import base64
 from huggingface_hub import hf_hub_download, HfApi
 import os
 
-# Background Image
+# Streamlit Config - Must be first Streamlit command
+st.set_page_config(page_title="Movie Recommender", layout="centered")
+
+# Set Background Image
 def set_background(image_file, opacity=1):
     with open(image_file, "rb") as image:
         encoded = base64.b64encode(image.read()).decode()
-    st.markdown(f"""
+    css = f"""
     <style>
     .stApp {{
         background-image: url("data:image/png;base64,{encoded}");
@@ -18,9 +21,36 @@ def set_background(image_file, opacity=1):
         opacity: {opacity};
     }}
     </style>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(css, unsafe_allow_html=True)
 
-# Recommend Function
+set_background('movieback2.png', opacity=1)
+
+# HuggingFace API Setup
+api = HfApi()
+
+try:
+    repo_files = api.list_repo_files("NERF-HAARIS/movie-recommender-files")
+    if "similarity.pkl" not in repo_files:
+        st.error("similarity.pkl not found in HuggingFace repo.")
+        st.stop()
+
+    similarity_path = hf_hub_download(
+        repo_id="NERF-HAARIS/movie-recommender-files",
+        filename="similarity.pkl"
+    )
+    similarity = pickle.load(open(similarity_path, 'rb'))
+
+except Exception as e:
+    st.error("Failed to load similarity.pkl from HuggingFace.")
+    st.text(f"Error: {e}")
+    st.stop()
+
+# Load Movie Data
+movie_dict = pickle.load(open('movies_dict.pkl', 'rb'))
+movies = pd.DataFrame(movie_dict)
+
+# Recommend Movies
 def recommend(movie):
     if movie not in movies['title'].values:
         return []
@@ -29,40 +59,7 @@ def recommend(movie):
     movie_list = sorted(enumerate(distances), reverse=True, key=lambda x: x[1])[1:6]
     return [movies.iloc[i[0]].title for i in movie_list]
 
-# Load Movie Data
-movie_dict = pickle.load(open('movies_dict.pkl', 'rb'))
-movies = pd.DataFrame(movie_dict)
-
-# HuggingFace Setup
-api = HfApi()
-SIMILARITY_FILE = "similarity.pkl"
-LOCAL_PATH = f"./{SIMILARITY_FILE}"
-
-try:
-    if os.path.exists(LOCAL_PATH):
-        st.info("Loading similarity.pkl from local cache...")
-        with open(LOCAL_PATH, "rb") as f:
-            similarity = pickle.load(f)
-    else:
-        st.info("Downloading similarity.pkl from HuggingFace...")
-        similarity_path = hf_hub_download(
-            repo_id="NERF-HAARIS/movie-recommender-files",
-            filename=SIMILARITY_FILE
-        )
-        similarity = pickle.load(open(similarity_path, 'rb'))
-        # Save a local copy
-        with open(LOCAL_PATH, "wb") as f:
-            pickle.dump(similarity, f)
-
-except Exception as e:
-    st.error("Error loading similarity.pkl")
-    st.text(f"{e}")
-    st.stop()
-
-# Streamlit Config
-st.set_page_config(page_title="Movie Recommender", layout="centered")
-set_background('movieback2.png', opacity=1)
-
+# UI
 st.markdown("<h1 style='text-align: center; color: white;'>Movie Recommendation System 🎬</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
